@@ -1,0 +1,10 @@
+services:
+  server:
+    build: .
+    container_name: python-uv-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    # Sobrescreva o comando aqui durante o desenvolvimento para usar live-reload, se necessário
+    # command: uv run uvicorn main:app --reload --host 0.0.0.0
