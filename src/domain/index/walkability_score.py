@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from domain.index.walkability_dimension import WalkabilityDimension
+from .walkability_dimension import WalkabilityDimension
 
+from domain.journey.position import Position
+from domain.journey.event import Event
+from domain.journey.segmentation_condition import SegmentationCondition
 
 class WalkabilityScore:
     @classmethod
     def set(cls, dimension: WalkabilityDimension, value: float) -> WalkabilityScore:
-        pass
+        return WalkabilityScore()
 
     def calculate(self) -> float:
-        pass
+        return 0.0
