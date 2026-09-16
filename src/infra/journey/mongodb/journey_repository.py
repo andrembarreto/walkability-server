@@ -1,7 +1,9 @@
-from src.domain.journey.journey_repository_interface import JourneyRepositoryInterface
+from pymongo import MongoClient
+
+from domain.journey.journey_repository_interface import JourneyRepositoryInterface
 
 class JourneyRepository(JourneyRepositoryInterface):
-    def __init__(self, connection_string: str = "mongodb://localhost:27017", database_name: str = "journey_db"):
+    def __init__(self, client: MongoClient, database_name: str):
         pass
 
     def save(self, journey):

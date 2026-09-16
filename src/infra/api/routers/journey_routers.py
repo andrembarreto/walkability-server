@@ -12,7 +12,7 @@ def save_journey(request: SaveJourneyInputDTO, session = Depends(get_session)):
 
     try:
         journey_repository = JourneyRepository(
-            connection_string=session.connection_string,
+            client=session.client,
             database_name=session.database_name
         )
         use_case = SaveJourneyUseCase(journey_repository)
