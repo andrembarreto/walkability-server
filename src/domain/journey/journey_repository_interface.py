@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.domain.journey.journey import Journey
+from .journey import Journey
 
 class JourneyRepositoryInterface(ABC):
     @abstractmethod

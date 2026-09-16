@@ -7,4 +7,4 @@ services:
     volumes:
       - .:/app
     # Sobrescreva o comando aqui durante o desenvolvimento para usar live-reload, se necessário
-    # command: uv run uvicorn main:app --reload --host 0.0.0.0
+    # command: uvicorn infra.api.main:app --app-dir src --reload --host 0.0.0.0 --port 8000

@@ -35,5 +35,7 @@ COPY --from=builder /app /app
 # Coloca o .venv no PATH. Isso faz o container usar as dependências automaticamente
 ENV PATH="/app/.venv/bin:$PATH"
 
-# O comando final agora chama o Python direto, sem precisar do binário do uv
-CMD ["python", "-c", "print('Servidor portável rodando direto do .venv!')"]
+# O comando final agora chama o uvicorn direto, sem precisar do binário do uv.
+# --app-dir src coloca a raiz do código no sys.path, permitindo os imports top-level
+# (domain/application/infra) usados em todo o projeto.
+CMD ["uvicorn", "infra.api.main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
