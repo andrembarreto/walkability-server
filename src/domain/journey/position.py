@@ -5,5 +5,4 @@ from datetime import datetime
 class Position:
     latitude: float
     longitude: float
-    altitude: float
     timestamp: datetime
