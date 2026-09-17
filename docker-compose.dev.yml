@@ -1,0 +1,30 @@
+# Overlay de desenvolvimento.
+# Uso: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  mongo:
+    image: mongo:8
+    container_name: walkability-mongo-dev
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - type: tmpfs
+        target: /data/db
+        tmpfs:
+          size: 536870912 # 512 MB
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  server:
+    environment:
+      MONGO_URI: "mongodb://mongo:27017/journey_db"
+      DATABASE_NAME: "journey_db"
+    volumes:
+      - /app/.venv
+    depends_on:
+      mongo:
+        condition: service_healthy
+    command: ["uvicorn", "infra.api.main:app", "--app-dir", "src", "--reload", "--host", "0.0.0.0", "--port", "8000"]
