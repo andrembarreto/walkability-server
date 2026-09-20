@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from domain.journey.position import Position
 from domain.journey.event import Event
 
-import index_table
-from index_table import EventInfluence
+from . import index_table
+from .index_table import EventInfluence
 
 """ Usando um pouco mais de type hinting aqui para facilitar a compreensão """
 

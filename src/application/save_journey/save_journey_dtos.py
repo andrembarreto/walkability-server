@@ -3,13 +3,13 @@ from uuid import UUID
 import datetime
 
 class PositionDTO(BaseModel):
-    latitude: float
-    longitude: float
-    timestamp: datetime.datetime
+    lat: float
+    long: float
+    time: datetime.datetime
 
 class EventDTO(BaseModel):
     id: int
-    position: PositionDTO
+    pos: PositionDTO
 
 class SaveJourneyInputDTO(BaseModel):
     route: list[PositionDTO]

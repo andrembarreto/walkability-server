@@ -24,12 +24,12 @@ class SaveJourneyUseCase:
     def event_from_dto(self, event_dto: EventDTO) -> Event:
         return Event(
             id=event_dto.id,
-            position=self.position_from_dto(event_dto.position)
+            position=self.position_from_dto(event_dto.pos)
         )
 
     def position_from_dto(self, position_dto: PositionDTO) -> Position:
         return Position(
-            latitude=position_dto.latitude,
-            longitude=position_dto.longitude,
-            timestamp=position_dto.timestamp
+            latitude=position_dto.lat,
+            longitude=position_dto.long,
+            timestamp=position_dto.time
         )
