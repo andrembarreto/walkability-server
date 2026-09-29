@@ -2,7 +2,7 @@ from math import atan2, cos, radians, sin, sqrt
 
 _EARTH_RADIUS_METERS = 6371000
 
-def calculate_distance(lat1, lon1, lat2, lon2):
+def calculate(lat1, lon1, lat2, lon2):
   """ Calcula a distância entre as duas coordenadas
   (lat1, lon1) e (lat2, lon2) em metros usando a
   fórmula de Haversine. """

@@ -1,7 +1,7 @@
 import pytest
 from hypothesis import given, strategies as st
 
-from domain.index.calculate_distance import calculate_distance
+from domain.index.distance import calculate
 
 @pytest.mark.parametrize(
     "nome_rota, lat1, lon1, lat2, lon2, distancia_esperada_m",
@@ -21,7 +21,7 @@ from domain.index.calculate_distance import calculate_distance
 )
 def test_calculate_distance_real_cases(nome_rota, lat1, lon1, lat2, lon2, distancia_esperada_m):
     """Testa se a função retorna os valores esperados para rotas reais conhecidas."""
-    distance = calculate_distance(lat1, lon1, lat2, lon2)
+    distance = calculate(lat1, lon1, lat2, lon2)
     assert distance == pytest.approx(distancia_esperada_m, rel=0.01)
 
 latitudes = st.floats(min_value=-90.0, max_value=90.0, allow_nan=False, allow_infinity=False)
@@ -30,13 +30,13 @@ longitudes = st.floats(min_value=-180.0, max_value=180.0, allow_nan=False, allow
 @given(lat1=latitudes, lon1=longitudes, lat2=latitudes, lon2=longitudes)
 def test_calculate_distance_properties(lat1, lon1, lat2, lon2):
     """Testa propriedades gerais: simetria e resultados não-negativos."""
-    distance = calculate_distance(lat1, lon1, lat2, lon2)
+    distance = calculate(lat1, lon1, lat2, lon2)
     assert distance >= 0.0
-    reverse_distance = calculate_distance(lat2, lon2, lat1, lon1)
+    reverse_distance = calculate(lat2, lon2, lat1, lon1)
     assert distance == pytest.approx(reverse_distance, rel=1e-5, abs=1e-8)
 
 @given(lat=latitudes, lon=longitudes)
 def test_calculate_distance_identity(lat, lon):
     """Testa a propriedade de identidade: a distância de um ponto para ele mesmo é 0."""
-    distance = calculate_distance(lat, lon, lat, lon)
+    distance = calculate(lat, lon, lat, lon)
     assert distance == pytest.approx(0.0, abs=1e-8)
