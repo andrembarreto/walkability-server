@@ -1,11 +1,11 @@
-from domain.index.table import Table, DimensionItem, EventItem
-from .export_index_dtos import ExportIndexOutputDTO, EventDTO, DimensionDTO
+from domain.index.table import Table, DimensionItem
+from .get_index_table_dtos import GetIndexTableOutputDTO, EventDTO, DimensionDTO
 
-class ExportIndexUseCase:
+class GetIndexTableUseCase:
     def __init__(self, table: Table):
         self._table = table
 
-    def execute(self) -> ExportIndexOutputDTO:
+    def execute(self) -> GetIndexTableOutputDTO:
         try:
             dimensions = []
             table_dimensions = self._table.dimensions
@@ -17,10 +17,10 @@ class ExportIndexUseCase:
                 )
                 dimensions.append(dimension)
 
-            return ExportIndexOutputDTO(dimensions=dimensions)
+            return GetIndexTableOutputDTO(dimensions=dimensions)
 
         except Exception as e:
-            raise ValueError(f"Erro ao exportar índice: {str(e)}")
+            raise ValueError(f"Erro ao obter tabela do índice: {str(e)}")
 
     def _extract_events_from_dimension(self, dimension: DimensionItem) -> list[EventDTO]:
         events = []

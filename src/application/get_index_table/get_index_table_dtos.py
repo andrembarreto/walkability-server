@@ -9,5 +9,5 @@ class DimensionDTO(BaseModel):
     name: str
     events: list[EventDTO]
 
-class ExportIndexOutputDTO(BaseModel):
+class GetIndexTableOutputDTO(BaseModel):
     dimensions: list[DimensionDTO]
