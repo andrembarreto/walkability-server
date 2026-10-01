@@ -4,15 +4,18 @@ import json
 
 class EventItem(BaseModel):
     id: int
+    name: str
     weight: float
 
 class CriteriumItem(BaseModel):
     id: int
+    name: str
     weight: float
     events: list[EventItem]
 
 class DimensionItem(BaseModel):
     id: int
+    name: str
     criteria: list[CriteriumItem]
 
 class Table:
@@ -45,12 +48,14 @@ class Table:
     def _parse_dimension(self, data: dict) -> DimensionItem:
         return DimensionItem(
             id=self._parse_id(data['id']),
+            name=data['name'],
             criteria=[self._parse_criterium(c) for c in data['criteria']]
         )
 
     def _parse_criterium(self, data: dict) -> CriteriumItem:
         return CriteriumItem(
             id=self._parse_id(data['id']),
+            name=data['name'],
             weight=data.get('weight', 1.0),
             events=[self._parse_event(e) for e in data['events']]
         )
@@ -58,6 +63,7 @@ class Table:
     def _parse_event(self, data: dict) -> EventItem:
         return EventItem(
             id=self._parse_id(data['id']),
+            name=data['name'],
             weight=data.get('weight', 1.0)
         )
 
