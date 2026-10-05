@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 .env
+
+# Backups do Mongo (mongodump)
+backup-*.archive.gz
