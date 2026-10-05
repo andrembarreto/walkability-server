@@ -237,8 +237,10 @@
     }
 
     function formatStartedAt(value) {
-      const date = new Date(value);
-      return isNaN(date) ? value : date.toLocaleString('pt-BR');
+      // O MongoDB devolve datetimes em UTC sem offset; sem o 'Z' o navegador os interpretaria como hora local.
+      const hasOffset = /(Z|[+-]\d{2}:?\d{2})$/.test(value);
+      const date = new Date(hasOffset ? value : value + 'Z');
+      return isNaN(date) ? value : date.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     }
 
     function selectJourney(button, journeyId) {
