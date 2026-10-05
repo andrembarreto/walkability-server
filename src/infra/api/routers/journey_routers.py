@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from domain.index.table import Table
 from application.evaluate_journey.evaluate_journey_dtos import EvaluateJourneyInputDTO, EvaluateJourneyOutputDTO
 from application.evaluate_journey.evaluate_journey_use_case import EvaluateJourneyUseCase
+from application.get_journey.get_journey_dtos import GetJourneyInputDTO, GetJourneyOutputDTO
+from application.get_journey.get_journey_use_case import GetJourneyUseCase
 from application.save_journey.save_journey_dtos import SaveJourneyInputDTO, SaveJourneyOutputDTO
 from application.save_journey.save_journey_use_case import SaveJourneyUseCase
 from infra.api.database import DBConnection
@@ -48,4 +50,24 @@ def get_journey_score(journey_id: str, session = Depends(DBConnection.get_sessio
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception:
         logger.exception("Erro ao avaliar jornada")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+
+@router.get("/journeys/{journey_id}", response_model=GetJourneyOutputDTO)
+def get_journey(journey_id: str, session = Depends(DBConnection.get_session)):
+    try:
+        journey_repository = JourneyRepository(session=session)
+        index_table = Table(source=get_index_table_source())
+        use_case = GetJourneyUseCase(
+            journey_repository=journey_repository,
+            index_table=index_table,
+        )
+        output = use_case.execute(input=GetJourneyInputDTO(journey_id=journey_id))
+
+        return output
+
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception:
+        logger.exception("Erro ao buscar jornada")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
