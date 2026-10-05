@@ -54,3 +54,11 @@ def test_parse_mongo_document_to_journey():
     parsed_journey = repository._parse_journey(repository._encode_journey(journey))
 
     assert parsed_journey == journey
+
+def test_find_all_returns_parsed_journeys():
+    session = MagicMock()
+    repository = JourneyRepository(session)
+    journey = make_journey()
+    session["journeys"].find.return_value = [repository._encode_journey(journey)]
+
+    assert repository.find_all() == [journey]

@@ -10,3 +10,7 @@ class JourneyRepositoryInterface(ABC):
 
     def find(self, journey_id: UUID) -> Journey:
         pass
+
+    @abstractmethod
+    def find_all(self) -> list[Journey]:
+        pass

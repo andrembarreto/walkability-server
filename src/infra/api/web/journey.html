@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Percurso</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1f2933;
+      --muted: #616e7c;
+      --border: #d9dee3;
+      --route: #8a8f98;
+      --event: #1d6fd8;
+      --notice-bg: #fff4d6;
+      --notice-fg: #6b4e00;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+    }
+    header {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      align-items: center;
+    }
+    form { display: flex; gap: 8px; flex: 1 1 320px; }
+    input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font: inherit;
+    }
+    button {
+      padding: 6px 12px;
+      border: 0;
+      border-radius: 4px;
+      background: var(--event);
+      color: #fff;
+      font: inherit;
+      cursor: pointer;
+    }
+    .info { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .dot.route { background: var(--route); }
+    .dot.event { background: var(--event); }
+    #notice {
+      padding: 8px 16px;
+      background: var(--notice-bg);
+      color: var(--notice-fg);
+    }
+    #notice[hidden] { display: none; }
+    main { flex: 1; min-height: 0; display: flex; }
+    #sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #sidebar h2 {
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    #journey-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+    #journey-list li { border-bottom: 1px solid var(--border); }
+    #journey-list button {
+      width: 100%;
+      padding: 8px 16px;
+      border-radius: 0;
+      background: transparent;
+      color: var(--fg);
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    #journey-list button:hover { background: #f2f4f6; }
+    #journey-list button.selected { background: #e6effb; }
+    #journey-list .journey-id { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; }
+    #journey-list .journey-meta { color: var(--muted); font-size: 12px; }
+    #journey-list-status { padding: 8px 16px; color: var(--muted); }
+    #journey-list-status[hidden] { display: none; }
+    #map { flex: 1; min-height: 0; }
+    @media (max-width: 640px) {
+      main { flex-direction: column; }
+      #sidebar { width: auto; max-height: 35vh; border-right: 0; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <form id="journey-form">
+      <input type="text" id="journey-id" placeholder="Id do percurso" aria-label="Id do percurso" autocomplete="off">
+      <button type="submit">Carregar</button>
+    </form>
+    <div class="info">
+      <span id="summary"></span>
+      <span class="legend">
+        <span><i class="dot route"></i>rota</span>
+        <span><i class="dot event"></i>evento</span>
+      </span>
+    </div>
+  </header>
+  <div id="notice" hidden></div>
+  <main>
+    <aside id="sidebar">
+      <h2>Percursos</h2>
+      <div id="journey-list-status">Carregando percursos…</div>
+      <ul id="journey-list"></ul>
+    </aside>
+    <div id="map"></div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    const DEFAULT_VIEW = { center: [-14.235, -51.925], zoom: 4 };
+    const ROUTE_COLOR = getCssVar('--route');
+    const EVENT_COLOR = getCssVar('--event');
+
+    const map = L.map('map').setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // pane própria para os eventos ficarem acima dos pontos da rota
+    map.createPane('events').style.zIndex = 650;
+
+    const noticeEl = document.getElementById('notice');
+    const summaryEl = document.getElementById('summary');
+    const inputEl = document.getElementById('journey-id');
+
+    function getCssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function showNotice(text) {
+      noticeEl.textContent = text;
+      noticeEl.hidden = !text;
+      map.invalidateSize();
+    }
+
+    document.getElementById('journey-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = inputEl.value.trim();
+      const url = new URL(window.location.href);
+      if (id) url.searchParams.set('id', id); else url.searchParams.delete('id');
+      window.location.href = url.toString();
+    });
+
+    function buildTooltip(descriptions) {
+      const el = document.createElement('div');
+      descriptions.forEach((text) => {
+        const line = document.createElement('div');
+        line.textContent = text;
+        el.appendChild(line);
+      });
+      return el;
+    }
+
+    function render(journey) {
+      const bounds = [];
+
+      journey.route.forEach((p) => {
+        bounds.push([p.lat, p.long]);
+        L.circleMarker([p.lat, p.long], {
+          radius: 4, color: ROUTE_COLOR, fillColor: ROUTE_COLOR, fillOpacity: 0.9, weight: 1
+        }).addTo(map);
+      });
+
+      // agrupa eventos com as mesmas coordenadas em um único marcador
+      const groups = new Map();
+      journey.events.forEach((ev) => {
+        const key = ev.pos.lat + ',' + ev.pos.long;
+        if (!groups.has(key)) groups.set(key, { latlng: [ev.pos.lat, ev.pos.long], descriptions: [] });
+        groups.get(key).descriptions.push(ev.description);
+      });
+      groups.forEach((group) => {
+        bounds.push(group.latlng);
+        L.circleMarker(group.latlng, {
+          pane: 'events', radius: 7, color: '#ffffff', weight: 1.5,
+          fillColor: EVENT_COLOR, fillOpacity: 1
+        }).bindTooltip(buildTooltip(group.descriptions), { direction: 'top' }).addTo(map);
+      });
+
+      summaryEl.textContent = 'Percurso ' + journey.journey_id + ' · ' +
+        journey.route.length + ' pontos de rota · ' + journey.events.length + ' eventos';
+
+      if (bounds.length) {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+      } else {
+        showNotice('Este percurso não possui pontos para exibir.');
+      }
+    }
+
+    async function load(id) {
+      try {
+        const response = await fetch('/journeys/' + encodeURIComponent(id));
+        let body = null;
+        try { body = await response.json(); } catch (_) { /* corpo não-JSON */ }
+        if (!response.ok) {
+          showNotice((body && body.detail) || ('Erro ao carregar o percurso (HTTP ' + response.status + ').'));
+          return;
+        }
+        render(body);
+      } catch (err) {
+        showNotice('Falha de rede ao carregar o percurso: ' + err.message);
+      }
+    }
+
+    const listEl = document.getElementById('journey-list');
+    const listStatusEl = document.getElementById('journey-list-status');
+
+    function showListStatus(text) {
+      listStatusEl.textContent = text;
+      listStatusEl.hidden = !text;
+    }
+
+    function formatStartedAt(value) {
+      // O MongoDB devolve datetimes em UTC sem offset; sem o 'Z' o navegador os interpretaria como hora local.
+      const hasOffset = /(Z|[+-]\d{2}:?\d{2})$/.test(value);
+      const date = new Date(hasOffset ? value : value + 'Z');
+      return isNaN(date) ? value : date.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    }
+
+    function selectJourney(button, journeyId) {
+      listEl.querySelectorAll('button.selected').forEach((b) => b.classList.remove('selected'));
+      button.classList.add('selected');
+      inputEl.value = journeyId;
+      document.getElementById('journey-form').requestSubmit();
+    }
+
+    function renderJourneyList(journeys, currentId) {
+      listEl.replaceChildren();
+      if (!journeys.length) {
+        showListStatus('Nenhum percurso cadastrado.');
+        return;
+      }
+      showListStatus('');
+      journeys.forEach((journey) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        if (journey.journey_id === currentId) button.classList.add('selected');
+
+        const idEl = document.createElement('span');
+        idEl.className = 'journey-id';
+        idEl.textContent = journey.journey_id;
+
+        const metaEl = document.createElement('span');
+        metaEl.className = 'journey-meta';
+        metaEl.textContent = 'Início: ' + formatStartedAt(journey.started_at) + ' · Duração: ' + journey.duration;
+
+        button.append(idEl, metaEl);
+        button.addEventListener('click', () => selectJourney(button, journey.journey_id));
+
+        const item = document.createElement('li');
+        item.appendChild(button);
+        listEl.appendChild(item);
+      });
+    }
+
+    async function loadJourneyList(currentId) {
+      try {
+        const response = await fetch('/journeys');
+        let body = null;
+        try { body = await response.json(); } catch (_) { /* corpo não-JSON */ }
+        if (!response.ok) {
+          showListStatus((body && body.detail) || ('Erro ao listar os percursos (HTTP ' + response.status + ').'));
+          return;
+        }
+        renderJourneyList(body.journeys, currentId);
+      } catch (err) {
+        showListStatus('Falha de rede ao listar os percursos: ' + err.message);
+      }
+    }
+
+    const id = (new URLSearchParams(window.location.search).get('id') || '').trim();
+    inputEl.value = id;
+    loadJourneyList(id);
+    if (id) {
+      load(id);
+    } else {
+      showNotice('Informe o id do percurso para exibi-lo no mapa.');
+    }
+  </script>
+</body>
+</html>
