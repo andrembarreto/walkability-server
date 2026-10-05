@@ -64,7 +64,46 @@
       color: var(--notice-fg);
     }
     #notice[hidden] { display: none; }
+    main { flex: 1; min-height: 0; display: flex; }
+    #sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #sidebar h2 {
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    #journey-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+    #journey-list li { border-bottom: 1px solid var(--border); }
+    #journey-list button {
+      width: 100%;
+      padding: 8px 16px;
+      border-radius: 0;
+      background: transparent;
+      color: var(--fg);
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    #journey-list button:hover { background: #f2f4f6; }
+    #journey-list button.selected { background: #e6effb; }
+    #journey-list .journey-id { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; }
+    #journey-list .journey-meta { color: var(--muted); font-size: 12px; }
+    #journey-list-status { padding: 8px 16px; color: var(--muted); }
+    #journey-list-status[hidden] { display: none; }
     #map { flex: 1; min-height: 0; }
+    @media (max-width: 640px) {
+      main { flex-direction: column; }
+      #sidebar { width: auto; max-height: 35vh; border-right: 0; border-bottom: 1px solid var(--border); }
+    }
   </style>
 </head>
 <body>
@@ -82,7 +121,14 @@
     </div>
   </header>
   <div id="notice" hidden></div>
-  <div id="map"></div>
+  <main>
+    <aside id="sidebar">
+      <h2>Percursos</h2>
+      <div id="journey-list-status">Carregando percursos…</div>
+      <ul id="journey-list"></ul>
+    </aside>
+    <div id="map"></div>
+  </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -182,8 +228,73 @@
       }
     }
 
+    const listEl = document.getElementById('journey-list');
+    const listStatusEl = document.getElementById('journey-list-status');
+
+    function showListStatus(text) {
+      listStatusEl.textContent = text;
+      listStatusEl.hidden = !text;
+    }
+
+    function formatStartedAt(value) {
+      const date = new Date(value);
+      return isNaN(date) ? value : date.toLocaleString('pt-BR');
+    }
+
+    function selectJourney(button, journeyId) {
+      listEl.querySelectorAll('button.selected').forEach((b) => b.classList.remove('selected'));
+      button.classList.add('selected');
+      inputEl.value = journeyId;
+      document.getElementById('journey-form').requestSubmit();
+    }
+
+    function renderJourneyList(journeys, currentId) {
+      listEl.replaceChildren();
+      if (!journeys.length) {
+        showListStatus('Nenhum percurso cadastrado.');
+        return;
+      }
+      showListStatus('');
+      journeys.forEach((journey) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        if (journey.journey_id === currentId) button.classList.add('selected');
+
+        const idEl = document.createElement('span');
+        idEl.className = 'journey-id';
+        idEl.textContent = journey.journey_id;
+
+        const metaEl = document.createElement('span');
+        metaEl.className = 'journey-meta';
+        metaEl.textContent = 'Início: ' + formatStartedAt(journey.started_at) + ' · Duração: ' + journey.duration;
+
+        button.append(idEl, metaEl);
+        button.addEventListener('click', () => selectJourney(button, journey.journey_id));
+
+        const item = document.createElement('li');
+        item.appendChild(button);
+        listEl.appendChild(item);
+      });
+    }
+
+    async function loadJourneyList(currentId) {
+      try {
+        const response = await fetch('/journeys');
+        let body = null;
+        try { body = await response.json(); } catch (_) { /* corpo não-JSON */ }
+        if (!response.ok) {
+          showListStatus((body && body.detail) || ('Erro ao listar os percursos (HTTP ' + response.status + ').'));
+          return;
+        }
+        renderJourneyList(body.journeys, currentId);
+      } catch (err) {
+        showListStatus('Falha de rede ao listar os percursos: ' + err.message);
+      }
+    }
+
     const id = (new URLSearchParams(window.location.search).get('id') || '').trim();
     inputEl.value = id;
+    loadJourneyList(id);
     if (id) {
       load(id);
     } else {

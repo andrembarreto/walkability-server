@@ -35,6 +35,13 @@ class JourneyRepository(JourneyRepositoryInterface):
             logger.exception("Erro ao buscar jornada no MongoDB")
             return None
 
+    def find_all(self) -> list[Journey]:
+        try:
+            return [self._parse_journey(data) for data in self.__collection.find()]
+        except PyMongoError:
+            logger.exception("Erro ao listar jornadas no MongoDB")
+            return []
+
     def _encode_journey(self, journey: Journey) -> dict:
         return {
             "_id": str(journey.id),
