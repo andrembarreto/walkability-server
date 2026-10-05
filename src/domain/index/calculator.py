@@ -72,10 +72,12 @@ class Calculator:
             dimension.id: self.calculate_dimension_final_score(dimension.id, events_by_segments)
             for dimension in self._table.dimensions
         }
-        global_score = sum(dimension_scores.values()) / len(dimension_scores)
+        global_score = sum(dimension_scores.values()) / len(dimension_scores) if dimension_scores else 0.0
         return Score(global_score=global_score, dimension_scores=dimension_scores)
 
     def calculate_dimension_final_score(self, dimension_id: int, events_by_segments: list[list[Event]]) -> float:
+        if not events_by_segments:
+            return 0.0
         return sum([self.calculate_dimension_score_in_segment(dimension_id, segment_events) for segment_events in events_by_segments]) \
             / len(events_by_segments)
 
