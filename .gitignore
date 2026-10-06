@@ -11,3 +11,10 @@ wheels/
 
 # Local development environments
 .env
+
+# Backups do Mongo (mongodump)
+backup-*.archive.gz
+
+# Malha viária do OSM (gerada por scripts/download_road_network.py) e cache do OSMnx
+data/*.graphml
+cache/

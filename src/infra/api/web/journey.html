@@ -54,6 +54,7 @@
       cursor: pointer;
     }
     .info { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); }
+    #scores strong { color: var(--fg); font-weight: 600; }
     .legend span { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; }
     .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     .dot.route { background: var(--route); }
@@ -114,6 +115,7 @@
     </form>
     <div class="info">
       <span id="summary"></span>
+      <span id="scores"></span>
       <span class="legend">
         <span><i class="dot route"></i>rota</span>
         <span><i class="dot event"></i>evento</span>
@@ -148,6 +150,7 @@
 
     const noticeEl = document.getElementById('notice');
     const summaryEl = document.getElementById('summary');
+    const scoresEl = document.getElementById('scores');
     const inputEl = document.getElementById('journey-id');
 
     function getCssVar(name) {
@@ -203,13 +206,50 @@
         }).bindTooltip(buildTooltip(group.descriptions), { direction: 'top' }).addTo(map);
       });
 
-      summaryEl.textContent = 'Percurso ' + journey.journey_id + ' · ' +
+      summaryEl.textContent =
         journey.route.length + ' pontos de rota · ' + journey.events.length + ' eventos';
 
       if (bounds.length) {
         map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
       } else {
         showNotice('Este percurso não possui pontos para exibir.');
+      }
+    }
+
+    function formatScore(value) {
+      return value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    }
+
+    function appendScore(label, value) {
+      if (scoresEl.childNodes.length) scoresEl.append(' · ');
+      const valueEl = document.createElement('strong');
+      valueEl.textContent = formatScore(value);
+      scoresEl.append(label + ' ', valueEl);
+    }
+
+    function renderScores(score, indexTable) {
+      // as chaves de dimension_scores chegam como string no JSON
+      const names = new Map(indexTable.dimensions.map((d) => [String(d.id), d.name]));
+      scoresEl.replaceChildren();
+      Object.entries(score.dimension_scores).forEach(([dimensionId, value]) => {
+        appendScore(names.get(dimensionId) || ('Dimensão ' + dimensionId), value);
+      });
+      appendScore('Global', score.global_score);
+    }
+
+    async function loadScores(id) {
+      try {
+        const [scoreResponse, indexResponse] = await Promise.all([
+          fetch('/journeys/' + encodeURIComponent(id) + '/score'),
+          fetch('/index'),
+        ]);
+        if (!scoreResponse.ok || !indexResponse.ok) {
+          scoresEl.textContent = 'Notas indisponíveis';
+          return;
+        }
+        renderScores(await scoreResponse.json(), await indexResponse.json());
+      } catch (_) {
+        scoresEl.textContent = 'Notas indisponíveis';
       }
     }
 
@@ -223,6 +263,7 @@
           return;
         }
         render(body);
+        loadScores(id);
       } catch (err) {
         showNotice('Falha de rede ao carregar o percurso: ' + err.message);
       }

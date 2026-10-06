@@ -1,0 +1,35 @@
+# Overlay de desenvolvimento com dados persistentes.
+# Uso: docker compose -f docker-compose.yml -f docker-compose.persist.yml up
+#
+# Os dados do Mongo ficam no volume nomeado "walkability-mongo-data"
+# (no host: /var/lib/docker/volumes/walkability-mongo-data/_data).
+# Sobrevivem a `down` e a reinícios; `down -v` APAGA o volume.
+services:
+  mongo:
+    image: mongo:8
+    container_name: walkability-mongo
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  server:
+    environment:
+      MONGO_URI: "mongodb://mongo:27017/journey_db"
+      DATABASE_NAME: "journey_db"
+    volumes:
+      - /app/.venv
+    depends_on:
+      mongo:
+        condition: service_healthy
+    command: ["uvicorn", "infra.api.main:app", "--app-dir", "src", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+
+volumes:
+  mongo-data:
+    name: walkability-mongo-data
