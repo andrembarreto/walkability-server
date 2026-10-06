@@ -13,6 +13,7 @@ from application.save_journey.save_journey_dtos import SaveJourneyInputDTO, Save
 from application.save_journey.save_journey_use_case import SaveJourneyUseCase
 from infra.api.database import DBConnection
 from infra.api.index_table import get_source as get_index_table_source
+from infra.api.segmentation import get_route_splitter
 from infra.journey.mongodb.journey_repository import JourneyRepository
 
 router = APIRouter()
@@ -57,6 +58,7 @@ def get_journey_score(journey_id: str, session = Depends(DBConnection.get_sessio
         use_case = EvaluateJourneyUseCase(
             journey_repository=journey_repository,
             index_table=index_table,
+            split_route=get_route_splitter(),
         )
         output = use_case.execute(input=EvaluateJourneyInputDTO(journey_id=journey_id))
 

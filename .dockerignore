@@ -6,3 +6,6 @@ __pycache__/
 
 # Backups do Mongo (mongodump)
 backup-*.archive.gz
+
+# Cache HTTP do OSMnx
+cache/

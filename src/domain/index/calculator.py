@@ -4,9 +4,8 @@ from domain.journey.position import Position
 from domain.journey.event import Event
 
 from .table import Table, EventItem
-from . import distance
+from .segmentation import RouteSplitter
 
-SEGMENT_REFERENCE_LENGTH_METERS = 100
 MAX_SCORE = 10.0
 
 @dataclass(frozen=True)
@@ -15,41 +14,9 @@ class Score:
     dimension_scores: dict[int, float]
 
 
-def split_route_into_segments(route: list[Position]) -> list[list[Position]]:
-    if len(route) == 0:
-        return []
-
-    p1_index = 0
-    p2_index = 1
-    current_segment = [route[p1_index]]
-    current_segment_tentative_length = 0
-    segments = []
-
-    while len(route) > p2_index:
-        p1 = route[p1_index]
-        p2 = route[p2_index]
-        points_distance = distance.calculate(
-            p1.latitude, p1.longitude, p2.latitude, p2.longitude
-        )
-        current_segment_tentative_length += points_distance
-        if current_segment_tentative_length > SEGMENT_REFERENCE_LENGTH_METERS:
-            segments.append(current_segment)
-            current_segment_tentative_length = 0
-            current_segment = []
-        current_segment.append(p2)
-        p1_index += 1
-        p2_index += 1
-
-    if len(current_segment) > 0:
-        segments.append(current_segment)
-
-    return segments
-
-
 def group_events_by_segments(
-    route: list[Position], events: list[Event]
+    segments: list[list[Position]], events: list[Event]
 ) -> list[list[Event]]:
-    segments = split_route_into_segments(route)
     events_by_segment = []
     for segment in segments:
         events_in_segment = []
@@ -61,12 +28,13 @@ def group_events_by_segments(
 
 
 class Calculator:
-    def __init__(self, table: Table):
+    def __init__(self, table: Table, split_route: RouteSplitter):
         self._table = table
+        self._split_route = split_route
 
     def calculate(self, route: list[Position], events: list[Event]) -> Score:
         events_by_segments: list[list[Event]] = group_events_by_segments(
-            route=route, events=events
+            segments=self._split_route(route), events=events
         )
         dimension_scores: dict[int, float] = {
             dimension.id: self.calculate_dimension_final_score(dimension.id, events_by_segments)
